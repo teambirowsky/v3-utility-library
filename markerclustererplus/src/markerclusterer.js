@@ -106,16 +106,36 @@ function ClusterIcon(cluster, styles) {
   this.visible_ = false;
 
   this.setMap(cluster.getMap()); // Note: this causes onAdd to be called
+
+  if(!google.maps.OverlayView.prototype.getIsDraggingMap) {
+    addDraggingMapByClusterEventHandler(this.getMap());
+  }
 }
 
+function addDraggingMapByClusterEventHandler (map) {
+  var _isDraggingMap = false;
+
+  google.maps.OverlayView.prototype.getIsDraggingMap = function () {
+    return _isDraggingMap;
+  };
+  google.maps.OverlayView.prototype.setIsDraggingMap = function (newIsDraggingMap) {
+    _isDraggingMap = newIsDraggingMap;
+  };
+
+  google.maps.event.addDomListener(map, "dragstart", function () {
+    _isDraggingMap = true;
+  });
+
+  google.maps.event.addDomListener(map, "dragend", function () {
+    _isDraggingMap = false;
+  });
+}
 
 /**
  * Adds the icon to the DOM.
  */
 ClusterIcon.prototype.onAdd = function () {
   var cClusterIcon = this;
-  var cMouseDownInCluster;
-  var cDraggingMapByCluster;
 
   this.div_ = document.createElement("div");
   this.div_.className = this.className_;
@@ -125,19 +145,9 @@ ClusterIcon.prototype.onAdd = function () {
 
   this.getPanes().overlayMouseTarget.appendChild(this.div_);
 
-  // Fix for Issue 157
-  this.boundsChangedListener_ = google.maps.event.addListener(this.getMap(), "bounds_changed", function () {
-    cDraggingMapByCluster = cMouseDownInCluster;
-  });
+  google.maps.event.addDomListener(this.div_, "mouseup", function (e) {
 
-  google.maps.event.addDomListener(this.div_, "mousedown", function () {
-    cMouseDownInCluster = true;
-    cDraggingMapByCluster = false;
-  });
-
-  google.maps.event.addDomListener(this.div_, "click", function (e) {
-    cMouseDownInCluster = false;
-    if (!cDraggingMapByCluster) {
+    if (!google.maps.OverlayView.prototype.getIsDraggingMap()) {
       var theBounds;
       var mz;
       var mc = cClusterIcon.cluster_.getMarkerClusterer();
@@ -173,6 +183,8 @@ ClusterIcon.prototype.onAdd = function () {
         e.stopPropagation();
       }
     }
+
+    google.maps.OverlayView.prototype.setIsDraggingMap(false);
   });
 
   google.maps.event.addDomListener(this.div_, "mouseover", function () {
@@ -251,23 +263,23 @@ ClusterIcon.prototype.show = function () {
     img = "<img src='" + this.url_ + "' style='position: absolute; top: " + spriteV + "px; left: " + spriteH + "px; ";
     if (!this.cluster_.getMarkerClusterer().enableRetinaIcons_) {
       img += "clip: rect(" + (-1 * spriteV) + "px, " + ((-1 * spriteH) + this.width_) + "px, " +
-          ((-1 * spriteV) + this.height_) + "px, " + (-1 * spriteH) + "px);";
+        ((-1 * spriteV) + this.height_) + "px, " + (-1 * spriteH) + "px);";
     }
     img += "'>";
     this.div_.innerHTML = img + "<div style='" +
-        "position: absolute;" +
-        "top: " + this.anchorText_[0] + "px;" +
-        "left: " + this.anchorText_[1] + "px;" +
-        "color: " + this.textColor_ + ";" +
-        "font-size: " + this.textSize_ + "px;" +
-        "font-family: " + this.fontFamily_ + ";" +
-        "font-weight: " + this.fontWeight_ + ";" +
-        "font-style: " + this.fontStyle_ + ";" +
-        "text-decoration: " + this.textDecoration_ + ";" +
-        "text-align: center;" +
-        "width: " + this.width_ + "px;" +
-        "line-height:" + this.height_ + "px;" +
-        "'>" + this.sums_.text + "</div>";
+      "position: absolute;" +
+      "top: " + this.anchorText_[0] + "px;" +
+      "left: " + this.anchorText_[1] + "px;" +
+      "color: " + this.textColor_ + ";" +
+      "font-size: " + this.textSize_ + "px;" +
+      "font-family: " + this.fontFamily_ + ";" +
+      "font-weight: " + this.fontWeight_ + ";" +
+      "font-style: " + this.fontStyle_ + ";" +
+      "text-decoration: " + this.textDecoration_ + ";" +
+      "text-align: center;" +
+      "width: " + this.width_ + "px;" +
+      "line-height:" + this.height_ + "px;" +
+      "'>" + this.sums_.text + "</div>";
     if (typeof this.sums_.title === "undefined" || this.sums_.title === "") {
       this.div_.title = this.cluster_.getMarkerClusterer().getTitle();
     } else {
@@ -1193,7 +1205,7 @@ MarkerClusterer.prototype.addMarkers = function (markers, opt_nodraw) {
     if (markers.hasOwnProperty(key)) {
       this.pushMarkerTo_(markers[key]);
     }
-  }  
+  }
   if (!opt_nodraw) {
     this.redraw_();
   }
@@ -1341,9 +1353,9 @@ MarkerClusterer.prototype.getExtendedBounds = function (bounds) {
 
   // Turn the bounds into latlng.
   var tr = new google.maps.LatLng(bounds.getNorthEast().lat(),
-      bounds.getNorthEast().lng());
+    bounds.getNorthEast().lng());
   var bl = new google.maps.LatLng(bounds.getSouthWest().lat(),
-      bounds.getSouthWest().lng());
+    bounds.getSouthWest().lng());
 
   // Convert the points to pixels and the extend out by the grid size.
   var trPix = projection.fromLatLngToDivPixel(tr);
@@ -1407,7 +1419,7 @@ MarkerClusterer.prototype.resetViewport_ = function (opt_hide) {
  * @param {google.maps.LatLng} p2 The second lat lng point.
  * @return {number} The distance between the two points in km.
  * @see http://www.movable-type.co.uk/scripts/latlong.html
-*/
+ */
 MarkerClusterer.prototype.distanceBetweenPoints_ = function (p1, p2) {
   var R = 6371; // Radius of the Earth in km
   var dLat = (p2.lat() - p1.lat()) * Math.PI / 180;
