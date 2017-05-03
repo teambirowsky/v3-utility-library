@@ -108,11 +108,11 @@ function ClusterIcon(cluster, styles) {
   this.setMap(cluster.getMap()); // Note: this causes onAdd to be called
 
   if(!google.maps.OverlayView.prototype.getIsDraggingMap) {
-    addDraggingMapByClusterEventHandler(this.getMap());
+    addDraggingMapEventHandler(this.getMap());
   }
 }
 
-function addDraggingMapByClusterEventHandler (map) {
+function addDraggingMapEventHandler (map) {
   var _isDraggingMap = false;
 
   google.maps.OverlayView.prototype.getIsDraggingMap = function () {
@@ -672,7 +672,7 @@ Cluster.prototype.isMarkerAlreadyAdded_ = function (marker) {
  * @param {Array.<google.maps.Marker>} [opt_markers] The markers to be added to the cluster.
  * @param {MarkerClustererOptions} [opt_options] The optional parameters.
  */
-function MarkerClusterer(map, opt_markers, opt_options) {
+window.MarkerClusterer = function MarkerClusterer(map, opt_markers, opt_options) {
   // MarkerClusterer implements google.maps.OverlayView interface. We use the
   // extend function to extend MarkerClusterer with google.maps.OverlayView
   // because it might not always be available when the code is defined so we
